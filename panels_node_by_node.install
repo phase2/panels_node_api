@@ -1,0 +1,19 @@
+<?php
+function panels_node_by_node_schema() {
+  $schema['panels_node_by_node'] = array(
+    'description' => 'List of nid that are panel nodes.',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'Id of a node that is a panel node.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+    ),
+  );
+  return $schema;
+}
+
+function panels_node_by_node_install() {
+  drupal_install_schema('panels_node_by_node');
+}

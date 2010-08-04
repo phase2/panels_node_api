@@ -1,0 +1,6 @@
+name = Panels Node By Individual Node
+description = "Enables the option for any node to be a panel node"
+package = "Panels"
+dependencies[] = panels_node_api
+core = 6.x
+

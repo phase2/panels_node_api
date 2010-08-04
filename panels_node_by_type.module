@@ -1,0 +1,44 @@
+<?php
+
+function panels_node_by_type_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'node_type_form') {
+    $node_type_settings = panels_node_by_type_settings($form['#node_type']->type);
+
+    if (!isset($form['panels_node'])) {
+      $form['panels_node'] = array();
+    }
+    $form['panels_node'] += array(
+      '#type' => 'fieldset',
+      '#title' => t('Panels Node'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#tree' => TRUE,
+    );
+    $form['panels_node']['enabled'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Is a Panels Node Content Type'),
+      '#description' => t('Check if you want all nodes of this type to be panel nodes'),
+      '#default_value' => $node_type_settings,
+      '#weight' => -15,
+    );
+    $form['#submit'][] = 'panels_node_by_type_content_type_submit';
+
+  }
+}
+
+function panels_node_by_type_settings($type = '', $value = NULL) {
+  $key = "panels_node_by_type_settings_$type";
+  if (isset($value)) {
+    variable_set($key, $value);
+  }
+  return variable_get($key, FALSE);
+}
+function panels_node_by_type_content_type_submit($form, &$form_state) {
+  $enabled = $form_state['values']['panels_node']['enabled'];
+  $type = $form_state['values']['type'];
+  panels_node_by_type_settings($type, $enabled);
+}
+
+function panels_node_by_type_panels_node_api_is_panel_node($node) {
+  return panels_node_by_type_settings($node->type);
+}

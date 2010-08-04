@@ -1,0 +1,132 @@
+<?php
+  variable_set('panel_types', array('story'));
+
+
+function panels_node_api_menu() {
+
+  $items['node/add/%/choose-layout'] = array(
+    'title' => 'Choose layout',
+    'access arguments' => array('create panel-nodes'),
+    'page callback' => 'panels_node_api_add',
+    'page arguments' => array(2),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+function panels_node_api_add($type) {
+  $output = 'bob';
+
+  panels_load_include('plugins');
+  panels_load_include('common');
+
+  $layouts = panels_common_get_allowed_layouts('panels_node');
+
+  // If no layout selected, present a list of choices.
+  foreach ($layouts as $id => $layout) {
+    $output .= panels_print_layout_link($id, $layout, 'node/add/'. $type .'/' . $id, array('query' => $_GET));
+  }
+  return $output;
+}
+
+function panels_node_api_nodeapi(&$node, $op, $a3, $a4) {
+  $hook = "panels_node_api_nodeapi_$op";
+  if (function_exists($hook)) {
+    $hook($node, $a3, $a4);
+  }
+}
+function panels_node_api_nodeapi_insert(&$node, $a3, $a4) {
+  if (panels_node_api_is_panel_node($node)) {
+    panels_node_insert($node);
+  }
+}
+function panels_node_api_nodeapi_delete(&$node, $a3, $a4) {
+  if (panels_node_api_is_panel_node($node)) {
+    panels_node_delete($node);
+  }
+}
+function panels_node_api_nodeapi_update(&$node, $a3, $a4) {
+  if (panels_node_api_is_panel_node($node)) {
+    // if we have a did then update otherwise add one
+    if($node->panels_node['did']) {
+      panels_node_update($node);
+      dpm($node->panels_node);
+    }
+    else {
+      $node->panels_node['layout'] = variable_get('panels_node_default_layout', 'onecol');
+      panels_node_insert($node);
+    }
+  }
+}
+function panels_node_api_nodeapi_view(&$node, $a3, $a4) {
+  if (panels_node_api_is_panel_node($node)) {
+    panels_node_view($node, $a3, $a4);
+  }
+}
+function panels_node_api_nodeapi_load(&$node, $a3, $a4) {
+  if (panels_node_api_is_panel_node($node)) {
+    $node->panels_node = db_fetch_array(db_query("SELECT * FROM {panels_node} WHERE nid = %d", $node->nid));
+  }
+}
+
+function panels_node_api_form_alter(&$form, &$form_state, $form_id) {
+
+  if (panels_node_api_is_panel_node_form($form)) {
+    $form['panels_node']['#tree'] = TRUE;
+    $node = $form['#node'];
+    if (empty($node->nid)) {
+      // Grab our selected layout from the $node, If it doesn't exist, try arg(3)
+      // and if that doesn't work present them with a list to pick from.
+      $panel_layout = isset($node->panel_layout) ? $node->panel_layout : arg(3);
+      if (empty($panel_layout)) {
+        $opts = $_GET;
+        unset($opts['q']);
+        $type = arg(2);
+        return drupal_goto('node/add/'. $type .'/choose-layout', $opts);
+      }
+
+      panels_load_include('plugins');
+      $layout = panels_get_layout($panel_layout);
+      if (empty($layout)) {
+        return drupal_not_found();
+      }
+      $form['panels_node']['layout'] = array(
+        '#type' => 'value',
+        '#value' => $panel_layout,
+      );
+    }
+    $css_id = '';
+    if (!empty($node->panels_node['css_id'])) {
+      $css_id = $node->panels_node['css_id'];
+    }
+
+    $form['panels_node']['css_id'] = array(
+      '#type' => 'textfield',
+      '#title' => t('CSS ID'),
+      '#size' => 30,
+      '#description' => t('An ID that can be used by CSS to style the panel.'),
+      '#default_value' => $css_id,
+    );
+    return $form;
+  }
+}
+
+
+function panels_node_api_is_panel_node_form($form) {
+  return panels_node_api_is_panel_node($form['#node']);
+
+}
+/*
+ * detect if a node is a panel node
+ * checking against all hool_panels_node_api_is_panels_node
+ * if any are true return true
+ * PARAM node: a node object
+ * RETURN : bool
+ */
+function panels_node_api_is_panel_node($node) {
+  $is_panel_node = FALSE;
+  $results = module_invoke_all('panels_node_api_is_panel_node', $node);
+  $is_panel_node = array_reduce($results, create_function('$a, $b','return $a ||$b;'), FALSE);
+  return $is_panel_node;
+}
+

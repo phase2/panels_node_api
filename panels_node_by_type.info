@@ -1,0 +1,6 @@
+name = Panels Node By Content type
+description = "Enables the option for all nodes of a content type to be panel nodes"
+package = "Panels"
+dependencies[] = panels_node_api
+core = 6.x
+

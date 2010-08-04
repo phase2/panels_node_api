@@ -1,0 +1,85 @@
+<?php
+
+function panels_node_by_node_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'node_type_form') {
+    $node_type_settings = panels_node_by_node_settings($form['#node_type']->type);
+
+    if (!isset($form['panels_node'])) {
+      $form['panels_node'] = array();
+    }
+    $form['panels_node'] += array(
+      '#type' => 'fieldset',
+      '#title' => t('Panels Node'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#tree' => TRUE,
+    );
+    $form['panels_node']['allow'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Allow nodes to be panel nodes'),
+      '#description' => t('Check if you want to allow nodes of this type to be set as panel nodes'),
+      '#default_value' => $node_type_settings,
+      '#weight' => -15,
+    );
+    $form['#submit'][] = 'panels_node_by_node_content_type_submit';
+
+  }
+  if(preg_match("/(.*)_node_form/", $form_id, $m) && panels_node_by_node_settings($m[1])) {
+    $node_nid_setting = panels_node_by_node_settings_nid($form['#node']->nid);
+    if (!isset($form['panels_node'])) {
+      $form['panels_node'] = array();
+    }
+    $form['panels_node'] += array(
+      '#type' => 'fieldset',
+      '#title' => t('Panels Node'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#tree' => TRUE,
+    );
+    $form['panels_node']['enabled'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Is a Panels Node'),
+      '#description' => t('Check if you this node to be a panel node'),
+      '#default_value' => $node_nid_setting,
+      '#weight' => -15,
+    );
+    $form['#submit'][] = 'panels_node_by_node_node_submit';
+  }
+ 
+}
+function panels_node_by_node_node_submit($form, &$form_state) {
+  $enabled = $form_state['values']['panels_node']['enabled'];
+  $nid = $form_state['values']['nid'];
+  panels_node_by_node_settings_nid($nid, $enabled);
+}
+function panels_node_by_node_content_type_submit($form, &$form_state) {
+  $enabled = $form_state['values']['panels_node']['allow'];
+  $type = $form_state['values']['type'];
+  panels_node_by_node_settings($type, $enabled);
+}
+
+function panels_node_by_node_settings_nid($nid, $value = NULL) {
+  if (isset($value)) {
+      db_query("DELETE FROM {panels_node_by_node} WHERE nid = %d", $nid);
+      dpm("bob");
+    if ($value) {
+      dpm("sue");
+      db_query("INSERT INTO {panels_node_by_node} VALUES (%d)", $nid);
+    }
+    return $value;
+  }
+  return (bool) db_result(db_query("select * from {panels_node_by_node} where nid = %d",$nid));
+}
+function panels_node_by_node_settings($type = '', $value = NULL) {
+  $key = "panels_node_by_node_settings_$type";
+  if (isset($value)) {
+    variable_set($key, $value);
+  }
+  return variable_get($key, FALSE);
+}
+
+function panels_node_by_node_panels_node_api_is_panel_node($node) {
+  if (panels_node_by_node_settings($node->type)) {
+    return panels_node_by_node_settings_nid($node->nid);
+  }
+}

@@ -1,0 +1,5 @@
+name = Panel Node API
+description = "Allows for other modules to set Nodes as Panel Nodes"
+package = "Panels"
+dependencies[] = panels_node
+core = 6.x
